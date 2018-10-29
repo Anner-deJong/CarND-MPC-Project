@@ -8,7 +8,9 @@ using namespace std;
 
 class MPC {
  public:
-  MPC();
+  int verbose;
+  int v_reference;
+  MPC(int VERBOSE_LEVEL, double V_REF);
 
   virtual ~MPC();
 

@@ -3,6 +3,8 @@
 
 #### This repository contains a c++ implementation of an Model Predictive Control project. The repository is structured so that it works together with the [simulation environment provided by Udacity](https://github.com/udacity/self-driving-car-sim/releases). (The link between the environment and the code is via [uWebSocketIO](https://github.com/uNetworking/uWebSockets), and already provided by Udacity). 
 
+
+## without latency and speed 40 actually the simulation runs as well
 ---
 
 ## Important scripts

@@ -100,7 +100,7 @@ class FG_eval {
 
       // add cost
       fg[0] += 100 * CppAD::pow(delta1 - delta0, 2); // penalize more for delta jerks
-      fg[0] += 100 * CppAD::pow(a1     - a0    , 2);
+      fg[0] +=   1 * CppAD::pow(a1     - a0    , 2);
     }
 
     /***************************************/

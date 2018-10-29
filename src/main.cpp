@@ -13,12 +13,13 @@
 using json = nlohmann::json;
 
 namespace {
-  double deg2rad(double x) { return x * M_PI / 180; }
-  constexpr double LATENCY = 0;
-  constexpr double V_REF   = 30;
+  double deg2rad(double x) { return x * M_PI / 180.; }
+  constexpr double LATENCY = 0.; // in seconds
+  constexpr int SIM_SLEEP_LATENCY = 00; // in miliseconds
+  constexpr double V_REF   = 30.;
 }
 
-constexpr int VERBOSE_LEVEL = 1; // 2 is all, 1 is cost only, 0 is nothing 
+constexpr int VERBOSE_LEVEL = 1; // 2: full json packages, 1: everything except json, 0: nothing 
 
 // For converting back and forth between radians and degrees.
 // constexpr double pi() { return M_PI; }
@@ -155,44 +156,78 @@ int main() {
           ////// local car coordinates //////
           ///////////////////////////////////
 
-          // STEP 1 - remap global locations to local
+          // // STEP 1 - remap global locations to local
+          // Eigen::VectorXd local_x(ptsx.size());
+          // Eigen::VectorXd local_y(ptsx.size());
+
+          // for (int i = 0; i < ptsx.size(); ++i) {
+          //   double x_coord = ptsx[i] - px;
+          //   double y_coord = ptsy[i] - py;
+          //   local_x[i] =   std::cos(psi) * x_coord + std::sin(psi) * y_coord;
+          //   local_y[i] = - std::sin(psi) * x_coord + std::cos(psi) * y_coord;
+          // }
+
+          // // STEP 2 - fit polynomial
+          // Eigen::VectorXd coeffs = polyfit(local_x, local_y, 3);
+
+          // // STEP 3 - create 6 dim state (calculate cte, epsi)
+          // // include latency
+          
+          // // local state variables
+          // double x_loc = 0.; double y_loc = 0.; double psi_loc = 0.; double v_loc = v;
+          // double epsi_loc = - std::atan(polyeval_derivative(coeffs, x_loc));
+          // double Lf = 2.67; // prevent declaring this twice!!
+
+          // // local state variables after latency
+          // double x_lat    = x_loc   + v_loc * std::cos(psi_loc) * LATENCY;
+          // double y_lat    = y_loc   + v_loc * std::sin(psi_loc) * LATENCY;
+          // double psi_lat  = psi_loc + v_loc / Lf * delta * LATENCY;
+          // double v_lat    = v_loc   + a * LATENCY;
+          // double cte_lat  = y_loc   - polyeval(coeffs, x_loc) + std::sin(epsi_loc) * LATENCY;
+          // double epsi_lat = psi_loc - std::atan(polyeval_derivative(coeffs, x_loc)) + v_loc / Lf * delta * LATENCY;
+          
+          // Eigen::VectorXd state(6);
+          // state << x_lat, y_lat, psi_lat, v_lat, cte_lat, epsi_lat;
+
+
+          // STEP 1 - update car position for latency
+          double Lf = 2.67; // prevent declaring this twice!!
+
+          double x_lat    = px  + v * std::cos(psi) * LATENCY;
+          double y_lat    = py  + v * std::sin(psi) * LATENCY;
+          double psi_lat  = psi + v / Lf * delta * LATENCY;
+          double v_lat    = v   + a * LATENCY;
+
+          // STEP 2 - map global ground truth path coordinates to local
           Eigen::VectorXd local_x(ptsx.size());
           Eigen::VectorXd local_y(ptsx.size());
 
           for (int i = 0; i < ptsx.size(); ++i) {
-            double x_coord = ptsx[i] - px;
-            double y_coord = ptsy[i] - py;
-            local_x[i] =   std::cos(psi) * x_coord + std::sin(psi) * y_coord;
-            local_y[i] = - std::sin(psi) * x_coord + std::cos(psi) * y_coord;
+            double x_coord = ptsx[i] - x_lat;
+            double y_coord = ptsy[i] - y_lat;
+            local_x[i] =   std::cos(psi_lat) * x_coord + std::sin(psi_lat) * y_coord;
+            local_y[i] = - std::sin(psi_lat) * x_coord + std::cos(psi_lat) * y_coord;
           }
 
-          // STEP 2 - fit polynomial
+          // STEP 3 - fit polynomial
           Eigen::VectorXd coeffs = polyfit(local_x, local_y, 3);
 
-          // STEP 3 - create 6 dim state (calculate cte, epsi)
-          // include latency
-          
-          // local state variables
-          double x_loc = 0; double y_loc = 0; double psi_loc = 0; double v_loc = v;
-          double epsi_loc = - std::atan(polyeval_derivative(coeffs, x_loc));
-          double Lf = 2.67; // prevent declaring this twice!!
+          // STEP 4 - create 6 dim state (calculate cte, epsi)
+          // local state variables. The car is now at the origin so x, y, and psi are 0
 
-          // local state variables after latency
-          double x_lat    = x_loc   + v_loc * std::cos(psi_loc) * LATENCY;
-          double y_lat    = y_loc   + v_loc * std::sin(psi_loc) * LATENCY;
-          double psi_lat  = psi_loc + v_loc / Lf * delta * LATENCY;
-          double v_lat    = v_loc   + a * LATENCY;
-          double cte_lat  = y_loc   - polyeval(coeffs, x_loc) + std::sin(epsi_loc) * LATENCY;
-          double epsi_lat = psi_loc - std::atan(polyeval_derivative(coeffs, x_loc)) + v_loc / Lf * delta * LATENCY;
+          double x_loc = 0.; double y_loc = 0.; double psi_loc = 0.; double v_loc = v_lat;
+          double cte_loc  = - polyeval(coeffs, x_loc);
+          double epsi_loc = - std::atan(polyeval_derivative(coeffs, x_loc));
           
           Eigen::VectorXd state(6);
-          state << x_lat, y_lat, psi_lat, v_lat, cte_lat, epsi_lat;
+          state << x_loc, y_loc, psi_loc, v_loc, cte_loc, epsi_loc;
 
-          // STEP 4 - Run solver
+          // STEP 5 - Run solver
           vector<double> results = mpc.Solve(state, coeffs);
 
           // Send results back to simulator
-          double steer_value = -results[0];  // / deg2rad(25);
+          // WHY DO WE DIVIDE THIS BY deg2rad(25)??
+          double steer_value = -results[0]; // / deg2rad(25);
           double throttle_value = results[1];
 
           std::cout << "steer_value: " << steer_value << std::endl;
@@ -247,7 +282,7 @@ int main() {
           //
           // NOTE: REMEMBER TO SET THIS TO 100 MILLISECONDS BEFORE
           // SUBMITTING.
-          this_thread::sleep_for(chrono::milliseconds(100));
+          this_thread::sleep_for(chrono::milliseconds(SIM_SLEEP_LATENCY));
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
       } else {

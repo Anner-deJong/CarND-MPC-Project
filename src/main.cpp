@@ -14,9 +14,9 @@ using json = nlohmann::json;
 
 namespace {
   double deg2rad(double x) { return x * M_PI / 180.; }
-  constexpr double LATENCY = 0.; // in seconds
-  constexpr int SIM_SLEEP_LATENCY = 00; // in miliseconds
-  constexpr double V_REF   = 30.;
+  constexpr double LATENCY           = 0.1;         // latency adjustment for MPC calculation, in seconds
+  constexpr int    SIM_SLEEP_LATENCY = 100;         // in miliseconds
+  constexpr double V_REF             = 60. / 2.237; //mph to mps
 }
 
 constexpr int VERBOSE_LEVEL = 1; // 2: full json packages, 1: everything except json, 0: nothing 
@@ -125,70 +125,13 @@ int main() {
           double px    = j[1]["x"];
           double py    = j[1]["y"];
           double psi   = j[1]["psi"];
-          double v     = j[1]["speed"];
-          double delta = j[1]["steering_angle"];
+          double v     = double(j[1]["speed"]) / 2.237; // convert to m/s
+          double delta = - double(j[1]["steering_angle"]); // minus because simulator has inversed angles
           double a     = j[1]["throttle"];
 
 
-          /*
-          * TODO: Calculate steering angle and throttle using MPC.
-          * 
-          * Both are in between [-1, 1].
-          *
-          */
-
-
-          ////////////////////////////////////
-          ////// global map coordinates //////
-          ////////////////////////////////////
-
-          // STEP 2 - fit polynomial
-          // Eigen::VectorXd coeffs = polyfit(ptsx, ptsy, 3);
-          
-          // STEP 3 - create 6 dim state (calculate cte, epsi)
-          // double cte  = py - polyeval(coeffs, px);
-          // double epsi = psi - std::atan(polyeval_derivative(coeffs, 0));
-          // Eigen::VectorXd state(6);
-          // state << px, py, psi, v, cte, epsi;
-
-
-          ///////////////////////////////////
-          ////// local car coordinates //////
-          ///////////////////////////////////
-
-          // // STEP 1 - remap global locations to local
-          // Eigen::VectorXd local_x(ptsx.size());
-          // Eigen::VectorXd local_y(ptsx.size());
-
-          // for (int i = 0; i < ptsx.size(); ++i) {
-          //   double x_coord = ptsx[i] - px;
-          //   double y_coord = ptsy[i] - py;
-          //   local_x[i] =   std::cos(psi) * x_coord + std::sin(psi) * y_coord;
-          //   local_y[i] = - std::sin(psi) * x_coord + std::cos(psi) * y_coord;
-          // }
-
-          // // STEP 2 - fit polynomial
-          // Eigen::VectorXd coeffs = polyfit(local_x, local_y, 3);
-
-          // // STEP 3 - create 6 dim state (calculate cte, epsi)
-          // // include latency
-          
-          // // local state variables
-          // double x_loc = 0.; double y_loc = 0.; double psi_loc = 0.; double v_loc = v;
-          // double epsi_loc = - std::atan(polyeval_derivative(coeffs, x_loc));
-          // double Lf = 2.67; // prevent declaring this twice!!
-
-          // // local state variables after latency
-          // double x_lat    = x_loc   + v_loc * std::cos(psi_loc) * LATENCY;
-          // double y_lat    = y_loc   + v_loc * std::sin(psi_loc) * LATENCY;
-          // double psi_lat  = psi_loc + v_loc / Lf * delta * LATENCY;
-          // double v_lat    = v_loc   + a * LATENCY;
-          // double cte_lat  = y_loc   - polyeval(coeffs, x_loc) + std::sin(epsi_loc) * LATENCY;
-          // double epsi_lat = psi_loc - std::atan(polyeval_derivative(coeffs, x_loc)) + v_loc / Lf * delta * LATENCY;
-          
-          // Eigen::VectorXd state(6);
-          // state << x_lat, y_lat, psi_lat, v_lat, cte_lat, epsi_lat;
-
+          /***************************************/
+          /****** START OF MPC CALCULATIONS ******/
 
           // STEP 1 - update car position for latency
           double Lf = 2.67; // prevent declaring this twice!!
@@ -225,13 +168,19 @@ int main() {
           // STEP 5 - Run solver
           vector<double> results = mpc.Solve(state, coeffs);
 
-          // Send results back to simulator
+          /***************************************/
+          /******* END OF MPC CALCULATIONS *******/
+
+          
+          
+
+          // Send results back to simulator in correct format
           // WHY DO WE DIVIDE THIS BY deg2rad(25)??
-          double steer_value = -results[0]; // / deg2rad(25);
+          double steer_value = -results[0] / deg2rad(25);
           double throttle_value = results[1];
 
-          std::cout << "steer_value: " << steer_value << std::endl;
-          std::cout << "throttle_value: " << throttle_value << std::endl;
+          if (VERBOSE_LEVEL >= 1) {std::cout << "steer_value: " << steer_value << std::endl;}
+          if (VERBOSE_LEVEL >= 1) {std::cout << "throttle_value: " << throttle_value << std::endl;}
 
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.

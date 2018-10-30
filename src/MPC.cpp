@@ -99,8 +99,8 @@ class FG_eval {
       AD<double> a1     = vars[t + 1 +     a_offset];
 
       // add cost
-      fg[0] += 100 * CppAD::pow(delta1 - delta0, 2); // penalize more for delta jerks
-      fg[0] +=   1 * CppAD::pow(a1     - a0    , 2);
+      fg[0] += 10000 * CppAD::pow(delta1 - delta0, 2); // penalize more for delta jerks
+      fg[0] +=    50 * CppAD::pow(a1     - a0    , 2);
     }
 
     /***************************************/

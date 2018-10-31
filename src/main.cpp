@@ -13,11 +13,11 @@
 using json = nlohmann::json;
 
 namespace {
-  double deg2rad(double x) { return x * M_PI / 180.; }
-  constexpr double LATENCY           = 0.1;         // latency adjustment for MPC calculation, in seconds
-  constexpr int    SIM_SLEEP_LATENCY = 100;         // in miliseconds
-  constexpr double V_REF             = 60. / 2.237; //mph to mps
-  constexpr double Lf                = 2.67;        // prevent declaring this twice!!
+  double deg2rad(double x) { return x * M_PI / 180.; } // helper function
+  constexpr double LATENCY           = 0.1;            // latency adjustment for MPC calculation, in seconds
+  constexpr int    SIM_SLEEP_LATENCY = 100;            // in miliseconds
+  constexpr double V_REF             = 60. / 2.237;    // mph to mps
+  constexpr double Lf                = 2.67;           // prevent declaring this twice!!
 }
 
 constexpr int VERBOSE_LEVEL = 1; // 2: full json packages, 1: everything except json, 0: nothing 
@@ -175,36 +175,26 @@ int main() {
           
           
 
-          // Send results back to simulator in correct format
-          // WHY DO WE DIVIDE THIS BY deg2rad(25)??
+          // Get results in correct format and send back to simulator
+          
+          // Udacity comment:
+          // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
+          // Otherwise the values will be in between [-deg2rad(25), deg2rad(25] instead of [-1, 1].
+          
+          // Not totally sure about that, still a bit puzzled as to why we divide by deg2rad(25)
+          // since 25 was arbitrarily chosen and does not seem to correspond with an actuator value of 1?
           double steer_value = -results[0] / deg2rad(25);
           double throttle_value = results[1];
 
           if (VERBOSE_LEVEL >= 1) {std::cout << "steer_value: " << steer_value << std::endl;}
           if (VERBOSE_LEVEL >= 1) {std::cout << "throttle_value: " << throttle_value << std::endl;}
 
-          json msgJson;
-          // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
-          // Otherwise the values will be in between [-deg2rad(25), deg2rad(25] instead of [-1, 1].
-          msgJson["steering_angle"] = steer_value;
-          msgJson["throttle"] = throttle_value;
-
-          //Display the MPC predicted trajectory
-          std::vector<double> mpc_x_vals;
-          std::vector<double> mpc_y_vals;
-          
-          for (int i=2; i<results.size(); i += 2) {
-            mpc_x_vals.push_back(results[i]);
-            mpc_y_vals.push_back(results[i+1]);
-          }
-
+          // Display the reference and MPC predicted trajectories
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
-          // the points in the simulator are connected by a Green line
+          // (next_x, next_y) are connected by a yellow line
+          // (mpc_x, mpc_y) are connected by a green line
 
-          msgJson["mpc_x"] = mpc_x_vals;
-          msgJson["mpc_y"] = mpc_y_vals;
-
-          //Display the waypoints/reference line
+          // Display the waypoints/reference line in yellow
           vector<double> next_x_vals = {};
           vector<double> next_y_vals = {};
 
@@ -213,8 +203,22 @@ int main() {
             next_y_vals.push_back(polyeval(coeffs, i));
           }
 
-          //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
-          // the points in the simulator are connected by a Yellow line
+          // Display the MPC calculated trajectory in green
+          std::vector<double> mpc_x_vals;
+          std::vector<double> mpc_y_vals;
+          
+          for (int i=2; i<results.size(); i += 2) {
+            mpc_x_vals.push_back(results[i]);
+            mpc_y_vals.push_back(results[i+1]);
+          }
+
+          // Add everything to a json message and send back
+          json msgJson;
+          msgJson["steering_angle"] = steer_value;
+          msgJson["throttle"] = throttle_value;
+
+          msgJson["mpc_x"] = mpc_x_vals;
+          msgJson["mpc_y"] = mpc_y_vals;
 
           msgJson["next_x"] = next_x_vals;
           msgJson["next_y"] = next_y_vals;

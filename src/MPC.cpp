@@ -117,7 +117,7 @@ class FG_eval {
     // all subsequent state constraints
     for (int t = 1; t < N; ++t) {
 
-       // get parameters at timestep t - 1
+      // get parameters at timestep t - 1
       AD<double> x0     = vars[t - 1 +     x_offset];
       AD<double> y0     = vars[t - 1 +     y_offset];
       AD<double> psi0   = vars[t - 1 +   psi_offset];
@@ -147,11 +147,9 @@ class FG_eval {
       // add constraints
       fg[1 + t +    x_offset] = x1    - (x0 + v0 * CppAD::cos(psi0) * dt);
       fg[1 + t +    y_offset] = y1    - (y0 + v0 * CppAD::sin(psi0) * dt);
-      // THIS SHOULD BECOME MINUS: ACCORDING TO INVERSED ANGLES. SEE PROJECT DESCRIPTION
       fg[1 + t +  psi_offset] = psi1  - (psi0 + v0 / Lf * delta0 * dt);
       fg[1 + t +    v_offset] = v1    - (v0 + a0 * dt);
       fg[1 + t +  cte_offset] = cte1  - (y0 - y0_gt + CppAD::sin(epsi0) * dt);
-      // THIS LINE AS WELL? THIS SHOULD BECOME MINUS: ACCORDING TO INVERSED ANGLES. SEE PROJECT DESCRIPTION
       fg[1 + t + epsi_offset] = epsi1 - (psi0 - CppAD::atan(y0_gt_d) + v0 / Lf * delta0 * dt);
 
     }

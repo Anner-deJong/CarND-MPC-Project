@@ -6,6 +6,7 @@ src/*udacity_old*
 install*
 *.rb
 set_git.sh
+lake_track_waypoints.csv
 
 # added by Anner for Sublime text
 *sublime*

@@ -7,8 +7,8 @@ using CppAD::AD;
 
 // degree 2 radian utility function
 namespace {
-  double deg2rad(double x) { return x * M_PI / 180; }
-  double rad2deg(double x) { return x * 180 / M_PI; }
+  double deg2rad(double x) { return x * M_PI / 180.; }
+  double rad2deg(double x) { return x * 180. / M_PI; }
 }
 
 // TODO: Set the timestep length, duration and reference speed

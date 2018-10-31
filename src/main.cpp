@@ -17,6 +17,7 @@ namespace {
   constexpr double LATENCY           = 0.1;         // latency adjustment for MPC calculation, in seconds
   constexpr int    SIM_SLEEP_LATENCY = 100;         // in miliseconds
   constexpr double V_REF             = 60. / 2.237; //mph to mps
+  constexpr double Lf                = 2.67;        // prevent declaring this twice!!
 }
 
 constexpr int VERBOSE_LEVEL = 1; // 2: full json packages, 1: everything except json, 0: nothing 
@@ -120,6 +121,7 @@ int main() {
         string event = j[0].get<string>();
         if (event == "telemetry") {
           // j[1] is the data JSON object
+          // get the state from the simulator
           vector<double> ptsx = j[1]["ptsx"];
           vector<double> ptsy = j[1]["ptsy"];
           double px    = j[1]["x"];
@@ -134,7 +136,6 @@ int main() {
           /****** START OF MPC CALCULATIONS ******/
 
           // STEP 1 - update car position for latency
-          double Lf = 2.67; // prevent declaring this twice!!
 
           double x_lat    = px  + v * std::cos(psi) * LATENCY;
           double y_lat    = py  + v * std::sin(psi) * LATENCY;
